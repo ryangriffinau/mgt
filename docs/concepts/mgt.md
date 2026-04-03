@@ -14,11 +14,13 @@ read_when:
 
 Name layers:
 
-- `mgt` near-term: modular graft tool
+- `mgt` near-term: module graft tool
 - `mgt` bigger vision: module gene transfer
 
 Reason:
 
+- "module" names the transferred unit
+- "modular" still matters, but as the desired property of the unit and host code
 - "graft" fits the initial operational job
 - "gene transfer" fits the broader system model and longer-term platform shape
 
@@ -41,11 +43,19 @@ Wanted:
 - safe apply / verify loop
 - intent-aware selection and adaptation
 - immediate graft function
-- minimsed dependency graph
+- minimized dependency graph
+- no donor dependency edge after transfer
 
 On fitness:
 
 We expect contribution of types to future generations (host + specific module + others using `mgt`) relative to other types in the same population and environment.
+
+Dependency stance:
+
+- aggressively minimize runtime/library dependencies introduced by transfer
+- do not retain donor package/repo as a dependency edge
+- allow practical local support code when needed: shims, bundled helpers, framework glue, fixtures
+- optimize for fit in host environment, not ideological zero-dependency purity
 
 ## Core inspiration
 
@@ -140,13 +150,12 @@ Best reusable unit often is:
 If `mgt` works, an agent should be able to:
 
 1. locate a useful module fast
-2. infer what donor repo means to do
-3. infer what host repo means to do
-4. align with user intent for this change
-5. understand dependencies and contract
-6. adapt it to host repo
-7. graft it in with minimal collateral change
-8. verify fitness
+2. align with user intent for this change
+3. understand dependencies and contract
+4. adapt it to host repo
+5. graft it in with minimal collateral change
+6. verify fitness
+7. later: critique donor/host fit with deeper intent models
 
 ## Core nouns
 
@@ -161,6 +170,7 @@ If `mgt` works, an agent should be able to:
 - donor intent: what the source module/repo is trying to achieve
 - host intent: what the target repo is trying to achieve
 - user intent: what the operator wants changed now
+- lineage: pinned provenance of where a transferred module came from
 
 ## Product shape
 
@@ -194,17 +204,15 @@ Principles:
 - composable subcommands
 - explicit scopes
 - dry-run default for writes early on
+- donor-known transfer first; discovery later
 
 Sketch:
 
 ```text
-mgt index <path>
-mgt intent <path>
-mgt search <query> [--json]
-mgt inspect <module-id> [--json]
-mgt graft <module-id> --into <path> [--dry-run] [--json]
-mgt adapt <module-id> --into <path> [--strategy <name>] [--json]
-mgt verify --into <path> [--json]
+mgt add <repo> --ref <sha> --path <module> --to <dst> --mode copy|adapt|synthesize [--json]
+mgt verify <dst> [--json]
+mgt refresh <dst> [--json]
+mgt diff <dst> [--json]
 mgt schema <command>
 mgt mcp
 ```
@@ -220,6 +228,12 @@ Three intents to model:
 - donor intent: what current/source repo or module is for
 - host intent: what target repo is for
 - user intent: what change is wanted right now
+
+Priority order:
+
+- v0: user intent primary; assume donor selection mostly correct
+- next: donor/host assessment and warning
+- later: donor discovery/search feeding upstream into this chain
 
 Why this matters:
 
@@ -250,6 +264,7 @@ Output:
 - confidence
 - unresolved ambiguities
 - constraints for search/ranking/adaptation
+- warnings when donor/host intent appear misaligned later in roadmap
 
 ### 2. Detect graftable modules
 
@@ -260,6 +275,7 @@ Need:
 - import/dependency graph
 - local test/example detection
 - side-effect scoring
+- donor dependency graph walk for required local transfer set
 
 Outputs:
 
@@ -281,6 +297,11 @@ Signals:
 - freshness / quality signals
 - donor/host/user intent alignment
 
+Note:
+
+- open-ended discovery/search is not the first wedge
+- ranking matters later once donor choice becomes less operator-specified
+
 ### 4. Adapt for host
 
 Adaptation tasks:
@@ -292,6 +313,7 @@ Adaptation tasks:
 - rewrite config paths
 - propose follow-up TODOs
 - preserve host intent, not donor quirks by default
+- prune unnecessary dependencies while preserving behavior
 
 ### 5. Verify fitness
 
@@ -317,6 +339,11 @@ Possible fields:
   "language": "ts",
   "name": "parseFrontmatter",
   "path": "src/frontmatter.ts",
+  "source": {
+    "repo": "github.com/org/repo",
+    "ref": "abc123",
+    "path": "packages/foo/src/bar"
+  },
   "exports": ["parseFrontmatter"],
   "imports": ["node:fs"],
   "internal_deps": ["module:abc"],
@@ -363,6 +390,7 @@ Possible fields:
 - CLI shell
 - command schema/introspection
 - intent inference
+- provenance / lineage store
 - indexer
 - graph/build of module manifests
 - ranking engine
@@ -448,38 +476,10 @@ Rules:
 - benchmark dataset versioned
 - promoted heuristics only after human review
 
-## Immediate roadmap
+## Execution docs
 
-### Phase 0: framing
-
-- lock nouns
-- lock CLI philosophy
-- define v0 scope
-
-### Phase 1: search + inspect
-
-- index repo
-- find symbols/modules
-- score portability
-- emit manifests
-
-### Phase 2: dry-run graft
-
-- generate graft plan
-- preview file changes
-- expose risks + needed follow-ups
-
-### Phase 3: apply + verify
-
-- write files
-- run targeted checks
-- emit fitness summary
-
-### Phase 4: evolve lane
-
-- benchmark harness
-- ranking experiments
-- adapter experiments
+- [V0](/Users/rgbrgy/Code/github/ryangriffinau/mgt/docs/V0.md)
+- [Roadmap](/Users/rgbrgy/Code/github/ryangriffinau/mgt/docs/ROADMAP.md)
 
 ## Sharp questions
 
@@ -501,6 +501,7 @@ Biases worth testing early:
 - agent-native contract matters as much as code quality
 - performance budget should be strict enough that repeated use feels cheap
 - graft ranking should optimize for intent fit before superficial code similarity
+- external repos/modules first; self-host after proof
 
 ## References
 
